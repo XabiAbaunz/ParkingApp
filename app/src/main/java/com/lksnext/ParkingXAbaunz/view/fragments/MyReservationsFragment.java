@@ -24,8 +24,6 @@ public class MyReservationsFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        // Aquí configuraremos la lógica para mostrar las reservas del usuario
     }
 
     @Override
@@ -33,8 +31,6 @@ public class MyReservationsFragment extends Fragment {
         super.onDestroyView();
         binding = null;
     }
-
-    // Método estático para crear una nueva instancia del fragmento
     public static MyReservationsFragment newInstance() {
         return new MyReservationsFragment();
     }

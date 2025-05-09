@@ -22,16 +22,13 @@ public class DashboardActivity extends AppCompatActivity {
         binding = ActivityDashboardBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Obtener el email del usuario desde el intent
         userEmail = getIntent().getStringExtra("USER_EMAIL");
         if (userEmail == null) {
             userEmail = "";
         }
 
-        // Configurar listener para el BottomNavigationView
         binding.bottomNavigation.setOnNavigationItemSelectedListener(item -> {
             Fragment selectedFragment = null;
-
             int itemId = item.getItemId();
             if (itemId == R.id.nav_new_reservation) {
                 selectedFragment = NewReservationFragment.newInstance();
@@ -51,9 +48,8 @@ public class DashboardActivity extends AppCompatActivity {
             return false;
         });
 
-        // Establecer el fragmento inicial (Nueva Reserva)
         if (savedInstanceState == null) {
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_new_reservation);
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_my_reservations);
         }
     }
 }

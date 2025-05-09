@@ -11,7 +11,6 @@ import com.lksnext.ParkingXAbaunz.R;
 import com.lksnext.ParkingXAbaunz.databinding.FragmentNewReservationBinding;
 
 public class NewReservationFragment extends Fragment {
-
     private FragmentNewReservationBinding binding;
 
     @Nullable
@@ -24,8 +23,6 @@ public class NewReservationFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        // Aquí configuraremos la lógica para crear nuevas reservas
     }
 
     @Override
@@ -33,8 +30,6 @@ public class NewReservationFragment extends Fragment {
         super.onDestroyView();
         binding = null;
     }
-
-    // Método estático para crear una nueva instancia del fragmento
     public static NewReservationFragment newInstance() {
         return new NewReservationFragment();
     }
