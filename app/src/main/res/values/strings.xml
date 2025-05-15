@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">ParkingApp</string>
+    <string-array name="plaza_types">
+        <item>Normal</item>
+        <item>Motocicleta</item>
+        <item>Eléctrico</item>
+        <item>Minusválido</item>
+    </string-array>
 </resources>

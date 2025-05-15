@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1A1D2A">
+    android:background="#1A1D2A"
+    tools:context=".view.fragments.NewReservationFragment">
 
     <TextView
         android:id="@+id/titleText"
@@ -19,13 +20,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Aquí irían los componentes para crear una nueva reserva -->
+    <Spinner
+        android:id="@+id/typeSpinner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:backgroundTint="#007BFF"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/titleText" />
+
     <Button
         android:id="@+id/selectDateButton"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="20dp"
         android:layout_marginEnd="20dp"
         android:backgroundTint="#007BFF"
         android:fontFamily="@font/urbanist_semibold"
@@ -34,10 +46,10 @@
         app:cornerRadius="12dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/titleText" />
+        app:layout_constraintTop_toBottomOf="@id/typeSpinner" />
 
     <Button
-        android:id="@+id/selectTimeButton"
+        android:id="@+id/selectStartTimeButton"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:layout_marginStart="20dp"
@@ -45,12 +57,28 @@
         android:layout_marginEnd="20dp"
         android:backgroundTint="#007BFF"
         android:fontFamily="@font/urbanist_semibold"
-        android:text="Seleccionar Hora"
+        android:text="Seleccionar Hora Inicio"
         android:textColor="#FFFFFF"
         app:cornerRadius="12dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/selectDateButton" />
+
+    <Button
+        android:id="@+id/selectEndTimeButton"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:backgroundTint="#007BFF"
+        android:fontFamily="@font/urbanist_semibold"
+        android:text="Seleccionar Hora Fin"
+        android:textColor="#FFFFFF"
+        app:cornerRadius="12dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/selectStartTimeButton" />
 
     <Button
         android:id="@+id/confirmReservationButton"
