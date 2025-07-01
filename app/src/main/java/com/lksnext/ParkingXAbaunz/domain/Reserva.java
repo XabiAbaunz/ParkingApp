@@ -2,7 +2,9 @@ package com.lksnext.ParkingXAbaunz.domain;
 
 public class Reserva {
 
-    String fecha, usuario, id;
+    String fecha, id;
+
+    Coche coche;
 
     Plaza plaza;
 
@@ -12,9 +14,9 @@ public class Reserva {
 
     }
 
-    public Reserva(String fecha, String usuario, String id, Plaza plaza, Hora hora) {
+    public Reserva(String fecha, Coche coche, String id, Plaza plaza, Hora hora) {
         this.fecha = fecha;
-        this.usuario = usuario;
+        this.coche = coche;
         this.plaza = plaza;
         this.hora = hora;
         this.id = id;
@@ -28,12 +30,12 @@ public class Reserva {
         this.fecha = fecha;
     }
 
-    public String getUsuario() {
-        return usuario;
+    public Coche getCoche() {
+        return coche;
     }
 
-    public void setUsuario(String usuario) {
-        this.usuario = usuario;
+    public void setCoche(Coche coche) {
+        this.coche = coche;
     }
 
     public Plaza getPlazaId() {

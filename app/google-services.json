@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "643508899716",
+    "project_id": "parkingapp-1fef2",
+    "storage_bucket": "parkingapp-1fef2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643508899716:android:a5539103884823f3eb97d1",
+        "android_client_info": {
+          "package_name": "com.lksnext.ParkingXAbaunz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUSV7Ro-1SELtBHaZt-QsXPkr-7vc4EGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

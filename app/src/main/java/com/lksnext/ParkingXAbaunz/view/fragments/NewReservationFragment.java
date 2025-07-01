@@ -151,14 +151,14 @@ public class NewReservationFragment extends Fragment {
         int endSeconds = endTime.get(Calendar.HOUR_OF_DAY) * 3600 + endTime.get(Calendar.MINUTE) * 60;
         Hora hora = new Hora(startSeconds, endSeconds);
 
-        // Crear la reserva (aquí usaríamos un ID real y el email del usuario actual)
+        /* Crear la reserva (aquí usaríamos un ID real y el email del usuario actual)
         Reserva reserva = new Reserva(
                 dateFormatter.format(selectedDate.getTime()),
                 "usuario@example.com", // Este sería el email del usuario actual
                 "temp-" + System.currentTimeMillis(), // En producción se generaría un ID real
                 plaza,
                 hora
-        );
+        ); */
 
         // Aquí se guardaría la reserva en la base de datos
         // Por ahora solo mostraremos un mensaje de éxito

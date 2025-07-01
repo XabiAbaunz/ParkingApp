@@ -13,11 +13,11 @@ import com.lksnext.ParkingXAbaunz.view.fragments.ProfileFragment;
 
 public class DashboardActivity extends AppCompatActivity {
 
-    private ActivityDashboardBinding binding;
-    private String userEmail;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ActivityDashboardBinding binding;
+        String userEmail;
+
         super.onCreate(savedInstanceState);
         binding = ActivityDashboardBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -27,7 +27,8 @@ public class DashboardActivity extends AppCompatActivity {
             userEmail = "";
         }
 
-        binding.bottomNavigation.setOnNavigationItemSelectedListener(item -> {
+        String finalUserEmail = userEmail;
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
             if (itemId == R.id.nav_new_reservation) {
@@ -35,7 +36,7 @@ public class DashboardActivity extends AppCompatActivity {
             } else if (itemId == R.id.nav_my_reservations) {
                 selectedFragment = MyReservationsFragment.newInstance();
             } else if (itemId == R.id.nav_profile) {
-                selectedFragment = ProfileFragment.newInstance(userEmail);
+                selectedFragment = ProfileFragment.newInstance(finalUserEmail);
             }
 
             if (selectedFragment != null) {

@@ -50,27 +50,33 @@ public class SignupViewModel extends ViewModel {
     }
 
     public void registerUser(String email, String password, String confirmPassword) {
+        clearError();
+
         setEmail(email);
         setPassword(password);
         setConfirmPassword(confirmPassword);
 
         if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
             error.setValue("Todos los campos son obligatorios");
+            registered.setValue(Boolean.FALSE);
             return;
         }
 
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             error.setValue("El formato del email no es válido");
+            registered.setValue(Boolean.FALSE);
             return;
         }
 
         if (!password.equals(confirmPassword)) {
             error.setValue("Las contraseñas no coinciden");
+            registered.setValue(Boolean.FALSE);
             return;
         }
 
         if (password.length() < 6) {
             error.setValue("La contraseña debe tener al menos 6 caracteres");
+            registered.setValue(Boolean.FALSE);
             return;
         }
 
@@ -81,13 +87,14 @@ public class SignupViewModel extends ViewModel {
                 registered.setValue(Boolean.TRUE);
             }
             @Override
-            public void onFailure() {
-                error.setValue("Error en el registro. Inténtalo de nuevo.");
+            public void onFailure(String errorMessage) {
+                error.setValue(errorMessage);
                 registered.setValue(Boolean.FALSE);
             }
         });
     }
     public void clearError() {
         error.setValue(null);
+        registered.setValue(null);
     }
 }
