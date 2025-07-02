@@ -9,6 +9,7 @@ import com.lksnext.ParkingXAbaunz.domain.Hora;
 import com.lksnext.ParkingXAbaunz.domain.Plaza;
 import com.lksnext.ParkingXAbaunz.domain.Reserva;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,6 +59,21 @@ public class MyReservationsViewModelTest {
         viewModel.getSuccessMessage().observeForever(successMessageObserver);
         viewModel.getErrorMessage().observeForever(errorMessageObserver);
         viewModel.getReservations().observeForever(reservationsObserver);
+        
+        // Reset mock interactions for better test isolation
+        reset(dataRepository, loadingObserver, successMessageObserver, errorMessageObserver, reservationsObserver);
+    }
+
+    @After
+    public void tearDown() {
+        // Improved test isolation: Clear observers and reset state
+        viewModel.isLoading().removeObserver(loadingObserver);
+        viewModel.getSuccessMessage().removeObserver(successMessageObserver);
+        viewModel.getErrorMessage().removeObserver(errorMessageObserver);
+        viewModel.getReservations().removeObserver(reservationsObserver);
+        
+        // Clear any messages to reset ViewModel state
+        viewModel.clearMessages();
     }
 
     @Test
@@ -68,22 +84,28 @@ public class MyReservationsViewModelTest {
         try (MockedStatic<DataRepository> mockedStatic = mockStatic(DataRepository.class)) {
             mockedStatic.when(DataRepository::getInstance).thenReturn(dataRepository);
             
-            // This implementation has the issue described: missing callback simulation for subsequent loadReservations()
+            // Fixed: Properly simulate deleteReservation callback
             doAnswer(invocation -> {
                 Callback callback = invocation.getArgument(1);
                 callback.onSuccess();
                 return null;
             }).when(dataRepository).deleteReservation(anyString(), any(Callback.class));
 
-            // Missing: doAnswer for the getReservations call triggered by loadReservations() after delete success
+            // Fixed: Simulate getReservations callback for loadReservations() calls
+            doAnswer(invocation -> {
+                DataRepository.ReservationsCallback callback = invocation.getArgument(0);
+                callback.onSuccess(mockReservations);
+                return null;
+            }).when(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
             
             viewModel.deleteReservation(reservationId);
 
-            // These assertions will fail due to missing callback simulation
-            verify(loadingObserver, times(2)).onChanged(true); // Initial + loadReservations call
+            // Fixed: Correct verification counts - delete triggers loadReservations
+            verify(loadingObserver, times(2)).onChanged(true); // Initial delete + loadReservations
             verify(successMessageObserver).onChanged("Reserva eliminada exitosamente");
-            verify(loadingObserver, times(2)).onChanged(false); // Will fail - loading never reset from second call
-            verify(dataRepository, times(2)).getReservations(any()); // Will fail - wrong count expected
+            verify(loadingObserver, times(2)).onChanged(false); // Both operations complete
+            verify(dataRepository).deleteReservation(reservationId, any(Callback.class));
+            verify(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
         }
     }
 
@@ -105,7 +127,7 @@ public class MyReservationsViewModelTest {
             verify(loadingObserver).onChanged(true);
             verify(errorMessageObserver).onChanged("Error al eliminar la reserva");
             verify(loadingObserver).onChanged(false);
-            verify(dataRepository, never()).getReservations(any()); // Should not reload on failure
+            verify(dataRepository, never()).getReservations(any(DataRepository.ReservationsCallback.class)); // Should not reload on failure
         }
     }
 
@@ -117,22 +139,28 @@ public class MyReservationsViewModelTest {
         try (MockedStatic<DataRepository> mockedStatic = mockStatic(DataRepository.class)) {
             mockedStatic.when(DataRepository::getInstance).thenReturn(dataRepository);
             
-            // Same issue: missing callback simulation for subsequent loadReservations()
+            // Fixed: Properly simulate updateReservation callback
             doAnswer(invocation -> {
                 Callback callback = invocation.getArgument(1);
                 callback.onSuccess();
                 return null;
             }).when(dataRepository).updateReservation(any(Reserva.class), any(Callback.class));
 
-            // Missing: doAnswer for the getReservations call triggered by loadReservations() after update success
+            // Fixed: Simulate getReservations callback for loadReservations() calls
+            doAnswer(invocation -> {
+                DataRepository.ReservationsCallback callback = invocation.getArgument(0);
+                callback.onSuccess(mockReservations);
+                return null;
+            }).when(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
             
             viewModel.updateReservation(reservation);
 
-            // These assertions will fail due to missing callback simulation
-            verify(loadingObserver, times(2)).onChanged(true); // Initial + loadReservations call
+            // Fixed: Correct verification counts - update triggers loadReservations
+            verify(loadingObserver, times(2)).onChanged(true); // Initial update + loadReservations
             verify(successMessageObserver).onChanged("Reserva actualizada exitosamente");
-            verify(loadingObserver, times(2)).onChanged(false); // Will fail - loading never reset from second call
-            verify(dataRepository, times(2)).getReservations(any()); // Will fail - wrong count expected
+            verify(loadingObserver, times(2)).onChanged(false); // Both operations complete
+            verify(dataRepository).updateReservation(reservation, any(Callback.class));
+            verify(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
         }
     }
 
@@ -154,7 +182,7 @@ public class MyReservationsViewModelTest {
             verify(loadingObserver).onChanged(true);
             verify(errorMessageObserver).onChanged("Error al actualizar la reserva");
             verify(loadingObserver).onChanged(false);
-            verify(dataRepository, never()).getReservations(any()); // Should not reload on failure
+            verify(dataRepository, never()).getReservations(any(DataRepository.ReservationsCallback.class)); // Should not reload on failure
         }
     }
 
@@ -162,11 +190,12 @@ public class MyReservationsViewModelTest {
     public void deleteAndUpdate_multipleOperations_handleCorrectly() {
         String reservationId = "123";
         Reserva reservation = createMockReservation();
+        List<Reserva> mockReservations = createMockReservations();
 
         try (MockedStatic<DataRepository> mockedStatic = mockStatic(DataRepository.class)) {
             mockedStatic.when(DataRepository::getInstance).thenReturn(dataRepository);
             
-            // Same issues: missing callback simulation for multiple loadReservations() calls
+            // Fixed: Properly simulate both operations with callbacks
             doAnswer(invocation -> {
                 Callback callback = invocation.getArgument(1);
                 callback.onSuccess();
@@ -179,14 +208,62 @@ public class MyReservationsViewModelTest {
                 return null;
             }).when(dataRepository).updateReservation(any(Reserva.class), any(Callback.class));
 
-            // Missing: doAnswer for getReservations calls
+            // Fixed: Simulate getReservations callback for both loadReservations() calls
+            doAnswer(invocation -> {
+                DataRepository.ReservationsCallback callback = invocation.getArgument(0);
+                callback.onSuccess(mockReservations);
+                return null;
+            }).when(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
             
             viewModel.deleteReservation(reservationId);
             viewModel.updateReservation(reservation);
 
-            // These assertions will fail due to isolation and callback issues
-            verify(dataRepository, times(2)).getReservations(any()); // Will fail - wrong count
-            verify(loadingObserver, times(4)).onChanged(false); // Will fail - loading states not properly reset
+            // Fixed: Correct verification counts for multiple operations
+            verify(dataRepository, times(2)).getReservations(any(DataRepository.ReservationsCallback.class)); // Two loadReservations calls
+            verify(loadingObserver, times(4)).onChanged(true); // Two operations, each triggering loadReservations
+            verify(loadingObserver, times(4)).onChanged(false); // All operations complete
+        }
+    }
+
+    @Test
+    public void loadReservations_successfulLoad_setsReservationsAndStopsLoading() {
+        List<Reserva> mockReservations = createMockReservations();
+
+        try (MockedStatic<DataRepository> mockedStatic = mockStatic(DataRepository.class)) {
+            mockedStatic.when(DataRepository::getInstance).thenReturn(dataRepository);
+            
+            doAnswer(invocation -> {
+                DataRepository.ReservationsCallback callback = invocation.getArgument(0);
+                callback.onSuccess(mockReservations);
+                return null;
+            }).when(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
+
+            viewModel.loadReservations();
+
+            verify(loadingObserver).onChanged(true);
+            verify(loadingObserver).onChanged(false);
+            verify(reservationsObserver).onChanged(mockReservations);
+            verify(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
+        }
+    }
+
+    @Test
+    public void loadReservations_failureLoad_setsErrorMessage() {
+        try (MockedStatic<DataRepository> mockedStatic = mockStatic(DataRepository.class)) {
+            mockedStatic.when(DataRepository::getInstance).thenReturn(dataRepository);
+            
+            doAnswer(invocation -> {
+                DataRepository.ReservationsCallback callback = invocation.getArgument(0);
+                callback.onFailure();
+                return null;
+            }).when(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
+
+            viewModel.loadReservations();
+
+            verify(loadingObserver).onChanged(true);
+            verify(loadingObserver).onChanged(false);
+            verify(errorMessageObserver).onChanged("Error al cargar las reservas");
+            verify(dataRepository).getReservations(any(DataRepository.ReservationsCallback.class));
         }
     }
 
