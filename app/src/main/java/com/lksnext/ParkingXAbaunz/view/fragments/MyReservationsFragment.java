@@ -5,29 +5,36 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.lksnext.ParkingXAbaunz.R;
 import com.lksnext.ParkingXAbaunz.databinding.FragmentMyReservationsBinding;
-import com.lksnext.ParkingXAbaunz.domain.Hora;
-import com.lksnext.ParkingXAbaunz.domain.Plaza;
 import com.lksnext.ParkingXAbaunz.domain.Reserva;
 import com.lksnext.ParkingXAbaunz.view.adapters.ReservationAdapter;
+import com.lksnext.ParkingXAbaunz.viewmodel.MyReservationsViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MyReservationsFragment extends Fragment {
+public class MyReservationsFragment extends Fragment implements ReservationAdapter.OnReservationClickListener {
 
     private FragmentMyReservationsBinding binding;
-    private ReservationAdapter futureAdapter, pastAdapter;
-    private List<Reserva> futureReservations;
-    private List<Reserva> pastReservations;
+    private MyReservationsViewModel viewModel;
+    private ReservationAdapter futureAdapter;
+    private ReservationAdapter pastAdapter;
+    private RecyclerView futureReservationsRecyclerView;
+    private RecyclerView pastReservationsRecyclerView;
+    private ProgressBar progressBar;
+    private TextView futureEmptyText;
+    private TextView pastEmptyText;
 
     public static MyReservationsFragment newInstance() {
         return new MyReservationsFragment();
@@ -44,107 +51,165 @@ public class MyReservationsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        futureReservations = getFutureReservations();
-        pastReservations = getPastReservations();
+        viewModel = new ViewModelProvider(this).get(MyReservationsViewModel.class);
+
+        futureReservationsRecyclerView = binding.futureReservationsRecyclerView;
+        pastReservationsRecyclerView = binding.pastReservationsRecyclerView;
+        progressBar = binding.progressBar;
+        futureEmptyText = binding.futureEmptyText;
+        pastEmptyText = binding.pastEmptyText;
 
         setupRecyclerViews();
+        setupObservers();
+        viewModel.loadReservations();
     }
 
     private void setupRecyclerViews() {
-        futureAdapter = new ReservationAdapter(futureReservations, this::onReservationClick);
-        pastAdapter = new ReservationAdapter(pastReservations, this::onReservationClick);
+        futureAdapter = new ReservationAdapter(new ArrayList<>(), this);
+        futureReservationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        futureReservationsRecyclerView.setAdapter(futureAdapter);
 
-        binding.futureReservationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.futureReservationsRecyclerView.setAdapter(futureAdapter);
-
-        binding.pastReservationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.pastReservationsRecyclerView.setAdapter(pastAdapter);
+        pastAdapter = new ReservationAdapter(new ArrayList<>(), this);
+        pastReservationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        pastReservationsRecyclerView.setAdapter(pastAdapter);
     }
 
-    private List<Reserva> getFutureReservations() {
-        List<Reserva> reservations = new ArrayList<>();
+    private void setupObservers() {
+        viewModel.getFutureReservationsLiveData().observe(getViewLifecycleOwner(), this::updateFutureReservations);
+        viewModel.getPastReservationsLiveData().observe(getViewLifecycleOwner(), this::updatePastReservations);
 
-        reservations.add(new Reserva("2025-05-16", "usuario1@example.com", "1",
-                new Plaza(101, "Normal"), new Hora(9 * 3600, 11 * 3600)));
-        reservations.add(new Reserva("2025-05-20", "usuario2@example.com", "2",
-                new Plaza(102, "Eléctrico"), new Hora(14 * 3600, 16 * 3600)));
-        reservations.add(new Reserva("2025-05-25", "usuario3@example.com", "3",
-                new Plaza(103, "Motocicleta"), new Hora(8 * 3600, 10 * 3600)));
+        viewModel.getIsLoadingLiveData().observe(getViewLifecycleOwner(), isLoading ->
+                progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE));
 
-        reservations.add(new Reserva("2025-06-01", "xabi@example.com", "7",
-                new Plaza(107, "Normal"), new Hora(10 * 3600, 12 * 3600)));
-        reservations.add(new Reserva("2025-06-05", "xabi@example.com", "8",
-                new Plaza(108, "Eléctrico"), new Hora(13 * 3600, 15 * 3600)));
-        reservations.add(new Reserva("2025-06-10", "xabi@example.com", "9",
-                new Plaza(109, "Normal"), new Hora(9 * 3600, 11 * 3600)));
-        reservations.add(new Reserva("2025-06-15", "xabi@example.com", "10",
-                new Plaza(110, "Minusválido"), new Hora(14 * 3600, 16 * 3600)));
-        reservations.add(new Reserva("2025-06-20", "xabi@example.com", "11",
-                new Plaza(111, "Normal"), new Hora(8 * 3600, 10 * 3600)));
-        reservations.add(new Reserva("2025-06-25", "xabi@example.com", "12",
-                new Plaza(112, "Eléctrico"), new Hora(11 * 3600, 13 * 3600)));
-        reservations.add(new Reserva("2025-06-30", "xabi@example.com", "13",
-                new Plaza(113, "Motocicleta"), new Hora(15 * 3600, 17 * 3600)));
-        reservations.add(new Reserva("2025-07-05", "xabi@example.com", "14",
-                new Plaza(114, "Normal"), new Hora(9 * 3600, 11 * 3600)));
+        viewModel.getErrorLiveData().observe(getViewLifecycleOwner(), error -> {
+            if (error != null) {
+                Toast.makeText(getContext(), error, Toast.LENGTH_LONG).show();
+            }
+        });
 
-        return reservations;
+        viewModel.getSuccessLiveData().observe(getViewLifecycleOwner(), success -> {
+            if (success != null) {
+                Toast.makeText(getContext(), success, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private List<Reserva> getPastReservations() {
-        List<Reserva> reservations = new ArrayList<>();
-
-        reservations.add(new Reserva("2025-05-01", "usuario4@example.com", "4",
-                new Plaza(104, "Minusválido"), new Hora(10 * 3600, 12 * 3600)));
-        reservations.add(new Reserva("2025-05-05", "usuario5@example.com", "5",
-                new Plaza(105, "Normal"), new Hora(13 * 3600, 15 * 3600)));
-        reservations.add(new Reserva("2025-05-10", "usuario6@example.com", "6",
-                new Plaza(106, "Eléctrico"), new Hora(9 * 3600, 11 * 3600)));
-        reservations.add(new Reserva("2025-05-14", "xabi@example.com", "15",
-                new Plaza(115, "Normal"), new Hora(8 * 3600, 10 * 3600)));
-
-        reservations.add(new Reserva("2025-04-01", "xabi@example.com", "16",
-                new Plaza(116, "Eléctrico"), new Hora(11 * 3600, 13 * 3600)));
-        reservations.add(new Reserva("2025-04-05", "xabi@example.com", "17",
-                new Plaza(117, "Motocicleta"), new Hora(14 * 3600, 16 * 3600)));
-        reservations.add(new Reserva("2025-04-10", "xabi@example.com", "18",
-                new Plaza(118, "Minusválido"), new Hora(9 * 3600, 11 * 3600)));
-        reservations.add(new Reserva("2025-04-15", "xabi@example.com", "19",
-                new Plaza(119, "Normal"), new Hora(12 * 3600, 14 * 3600)));
-        reservations.add(new Reserva("2025-04-20", "xabi@example.com", "20",
-                new Plaza(120, "Eléctrico"), new Hora(15 * 3600, 17 * 3600)));
-        reservations.add(new Reserva("2025-04-25", "xabi@example.com", "21",
-                new Plaza(121, "Normal"), new Hora(8 * 3600, 10 * 3600)));
-
-        return reservations;
+    private void updateFutureReservations(List<Reserva> reservas) {
+        if (reservas == null || reservas.isEmpty()) {
+            futureEmptyText.setVisibility(View.VISIBLE);
+            futureReservationsRecyclerView.setVisibility(View.GONE);
+        } else {
+            futureEmptyText.setVisibility(View.GONE);
+            futureReservationsRecyclerView.setVisibility(View.VISIBLE);
+            futureAdapter = new ReservationAdapter(reservas, this);
+            futureReservationsRecyclerView.setAdapter(futureAdapter);
+        }
     }
 
-    private void onReservationClick(Reserva reserva) {
+    private void updatePastReservations(List<Reserva> reservas) {
+        if (reservas == null || reservas.isEmpty()) {
+            pastEmptyText.setVisibility(View.VISIBLE);
+            pastReservationsRecyclerView.setVisibility(View.GONE);
+        } else {
+            pastEmptyText.setVisibility(View.GONE);
+            pastReservationsRecyclerView.setVisibility(View.VISIBLE);
+            pastAdapter = new ReservationAdapter(reservas, this);
+            pastReservationsRecyclerView.setAdapter(pastAdapter);
+        }
+    }
+
+    @Override
+    public void onReservationClick(Reserva reserva) {
+        List<Reserva> futureReservations = viewModel.getFutureReservationsLiveData().getValue();
+        boolean isFutureReservation = futureReservations != null && futureReservations.contains(reserva);
+
+        if (isFutureReservation) {
+            showReservationOptions(reserva);
+        } else {
+            showReservationDetails(reserva);
+        }
+    }
+
+    private void showReservationOptions(Reserva reserva) {
+        String[] options = {"Ver detalles", "Editar reserva", "Eliminar reserva"};
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Opciones de reserva");
+        builder.setItems(options, (dialog, which) -> {
+            switch (which) {
+                case 0:
+                    showReservationDetails(reserva);
+                    break;
+                case 1:
+                    editReservation(reserva);
+                    break;
+                case 2:
+                    confirmDeleteReservation(reserva);
+                    break;
+            }
+        });
+        builder.show();
+    }
+
+    private void confirmDeleteReservation(Reserva reserva) {
         new AlertDialog.Builder(getContext())
-                .setTitle("Opciones de Reserva")
-                .setMessage("¿Qué quieres hacer con esta reserva?")
-                .setPositiveButton("Editar", (dialog, which) -> {
-                    Toast.makeText(getContext(), "Editar reserva", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Eliminar", (dialog, which) -> {
-                    boolean removed = false;
-
-                    if (futureReservations.contains(reserva)) {
-                        futureReservations.remove(reserva);
-                        futureAdapter.notifyDataSetChanged();
-                        removed = true;
-                    } else if (pastReservations.contains(reserva)) {
-                        pastReservations.remove(reserva);
-                        pastAdapter.notifyDataSetChanged();
-                        removed = true;
-                    }
-
-                    if (removed) {
-                        Toast.makeText(getContext(), "Reserva eliminada", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNeutralButton("Cancelar", (dialog, which) -> dialog.dismiss())
+                .setTitle("Eliminar Reserva")
+                .setMessage("¿Estás seguro de que quieres eliminar esta reserva?")
+                .setPositiveButton("Eliminar", (dialog, which) -> viewModel.deleteReservation(reserva))
+                .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
                 .show();
+    }
+
+    private void showReservationDetails(Reserva reserva) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Detalles de la reserva");
+
+        StringBuilder detailsBuilder = new StringBuilder();
+        detailsBuilder.append("Fecha: ").append(formatearFecha(reserva.getFecha())).append("\n\n");
+
+        if (reserva.getCoche() != null) {
+            detailsBuilder.append("Coche: ").append(reserva.getCoche().getMarca())
+                    .append(" ").append(reserva.getCoche().getModelo())
+                    .append(" (").append(reserva.getCoche().getMatricula()).append(")\n\n");
+        }
+
+        if (reserva.getPlazaId() != null) {
+            detailsBuilder.append("Tipo de plaza: ").append(reserva.getPlazaId().getTipo()).append("\n\n");
+        }
+
+        detailsBuilder.append("Horario: ").append(formatearHora(reserva.getHoraInicio()))
+                .append(" - ").append(formatearHora(reserva.getHoraFin()));
+
+        builder.setMessage(detailsBuilder.toString());
+        builder.setPositiveButton("Cerrar", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
+    private void editReservation(Reserva reserva) {
+        EditReservationDialogFragment dialogFragment = EditReservationDialogFragment.newInstance(reserva);
+        dialogFragment.show(getParentFragmentManager(), "EditReservationDialog");
+    }
+
+    private String formatearFecha(String fechaOriginal) {
+        if (fechaOriginal == null || fechaOriginal.length() != 10) {
+            return fechaOriginal;
+        }
+
+        try {
+            String anio = fechaOriginal.substring(0, 4);
+            String mes = fechaOriginal.substring(5, 7);
+            String dia = fechaOriginal.substring(8, 10);
+
+            return dia + "/" + mes + "/" + anio;
+        } catch (Exception e) {
+            return fechaOriginal;
+        }
+    }
+
+    private String formatearHora(long segundos) {
+        int horas = (int)(segundos / 3600);
+        int minutos = (int)((segundos % 3600) / 60);
+        return String.format("%02d:%02d", horas, minutos);
     }
 
     @Override

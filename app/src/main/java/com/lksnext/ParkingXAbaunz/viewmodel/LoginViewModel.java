@@ -8,6 +8,7 @@ import com.lksnext.ParkingXAbaunz.data.DataRepository;
 import com.lksnext.ParkingXAbaunz.domain.Callback;
 
 public class LoginViewModel extends ViewModel {
+
     private final MutableLiveData<Boolean> logged = new MutableLiveData<>(null);
     private final MutableLiveData<String> email = new MutableLiveData<>("");
     private final MutableLiveData<String> password = new MutableLiveData<>("");
@@ -38,11 +39,15 @@ public class LoginViewModel extends ViewModel {
     }
 
     public void loginUser(String email, String password) {
+        clearError();
+        clearLogged();
+
         setEmail(email);
         setPassword(password);
 
         if (email.isEmpty() || password.isEmpty()) {
             error.setValue("El email y la contraseña son obligatorios");
+            logged.setValue(Boolean.FALSE);
             return;
         }
 
@@ -54,13 +59,18 @@ public class LoginViewModel extends ViewModel {
             }
 
             @Override
-            public void onFailure() {
-                error.setValue("Error de inicio de sesión");
+            public void onFailure(String errorMessage) {
+                error.setValue(errorMessage);
                 logged.setValue(Boolean.FALSE);
             }
         });
     }
+
     public void clearError() {
         error.setValue(null);
+    }
+
+    public void clearLogged() {
+        logged.setValue(null);
     }
 }

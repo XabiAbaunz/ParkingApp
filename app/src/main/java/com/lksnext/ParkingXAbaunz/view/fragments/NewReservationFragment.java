@@ -6,34 +6,42 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.lksnext.ParkingXAbaunz.R;
 import com.lksnext.ParkingXAbaunz.databinding.FragmentNewReservationBinding;
-import com.lksnext.ParkingXAbaunz.domain.Hora;
-import com.lksnext.ParkingXAbaunz.domain.Plaza;
-import com.lksnext.ParkingXAbaunz.domain.Reserva;
+import com.lksnext.ParkingXAbaunz.domain.Coche;
+import com.lksnext.ParkingXAbaunz.view.adapters.CocheSpinnerAdapter;
+import com.lksnext.ParkingXAbaunz.viewmodel.NewReservationViewModel;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 public class NewReservationFragment extends Fragment {
 
     private FragmentNewReservationBinding binding;
+    private NewReservationViewModel viewModel;
     private Calendar selectedDate = Calendar.getInstance();
     private Calendar startTime = Calendar.getInstance();
     private Calendar endTime = Calendar.getInstance();
     private boolean isDateSelected = false;
     private boolean isStartTimeSelected = false;
     private boolean isEndTimeSelected = false;
-    private SimpleDateFormat dateFormatter = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+    private SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+    private SimpleDateFormat displayDateFormatter = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
     private SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm", Locale.getDefault());
+    private Coche selectedCoche;
+    private List<Coche> cochesList = new ArrayList<>();
 
     public static NewReservationFragment newInstance() {
         return new NewReservationFragment();
@@ -50,23 +58,79 @@ public class NewReservationFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        setupSpinner();
+        viewModel = new ViewModelProvider(this).get(NewReservationViewModel.class);
 
-        // Configurar los listeners de los botones
-        binding.selectDateButton.setOnClickListener(v -> showDatePicker());
-        binding.selectStartTimeButton.setOnClickListener(v -> showTimePicker(true));
-        binding.selectEndTimeButton.setOnClickListener(v -> showTimePicker(false));
-        binding.confirmReservationButton.setOnClickListener(v -> confirmReservation());
+        setupSpinners();
+        setupObservers();
+        setupClickListeners();
+
+        viewModel.loadCoches();
     }
 
-    private void setupSpinner() {
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+    private void setupSpinners() {
+        ArrayAdapter<CharSequence> tipoAdapter = ArrayAdapter.createFromResource(
                 requireContext(),
                 R.array.plaza_types,
                 R.layout.spinner_item_selected
         );
-        adapter.setDropDownViewResource(R.layout.spinner_item_dropdown);
-        binding.typeSpinner.setAdapter(adapter);
+        tipoAdapter.setDropDownViewResource(R.layout.spinner_item_dropdown);
+        binding.typeSpinner.setAdapter(tipoAdapter);
+
+        CocheSpinnerAdapter cocheAdapter = new CocheSpinnerAdapter(requireContext(), cochesList);
+        binding.cocheSpinner.setAdapter(cocheAdapter);
+
+        binding.cocheSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                selectedCoche = (Coche) parent.getItemAtPosition(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                selectedCoche = null;
+            }
+        });
+    }
+
+    private void setupObservers() {
+        viewModel.getCochesLiveData().observe(getViewLifecycleOwner(), coches -> {
+            cochesList.clear();
+            if (coches != null && !coches.isEmpty()) {
+                cochesList.addAll(coches);
+                CocheSpinnerAdapter adapter = (CocheSpinnerAdapter) binding.cocheSpinner.getAdapter();
+                adapter.notifyDataSetChanged();
+
+                if (!cochesList.isEmpty()) {
+                    selectedCoche = cochesList.get(0);
+                }
+            } else {
+                Toast.makeText(requireContext(), "No tienes coches registrados. Por favor, añade un coche primero.", Toast.LENGTH_LONG).show();
+            }
+        });
+
+        viewModel.getErrorLiveData().observe(getViewLifecycleOwner(), error -> {
+            if (error != null) {
+                Toast.makeText(requireContext(), error, Toast.LENGTH_LONG).show();
+            }
+        });
+
+        viewModel.getSuccessLiveData().observe(getViewLifecycleOwner(), success -> {
+            if (success != null) {
+                Toast.makeText(requireContext(), success, Toast.LENGTH_LONG).show();
+                resetFields();
+            }
+        });
+
+        viewModel.getIsLoadingLiveData().observe(getViewLifecycleOwner(), isLoading -> {
+            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        });
+    }
+
+    private void setupClickListeners() {
+        binding.selectDateButton.setOnClickListener(v -> showDatePicker());
+        binding.selectStartTimeButton.setOnClickListener(v -> showTimePicker(true));
+        binding.selectEndTimeButton.setOnClickListener(v -> showTimePicker(false));
+        binding.confirmReservationButton.setOnClickListener(v -> confirmReservation());
     }
 
     private void showDatePicker() {
@@ -77,18 +141,15 @@ public class NewReservationFragment extends Fragment {
                     selectedDate.set(Calendar.MONTH, month);
                     selectedDate.set(Calendar.DAY_OF_MONTH, dayOfMonth);
                     isDateSelected = true;
-
-                    binding.selectDateButton.setText("Fecha: " + dateFormatter.format(selectedDate.getTime()));
+                    binding.selectDateButton.setText("Fecha: " + displayDateFormatter.format(selectedDate.getTime()));
                 },
                 selectedDate.get(Calendar.YEAR),
                 selectedDate.get(Calendar.MONTH),
                 selectedDate.get(Calendar.DAY_OF_MONTH)
         );
 
-        // Establecer fecha mínima (hoy)
         Calendar today = Calendar.getInstance();
         datePickerDialog.getDatePicker().setMinDate(today.getTimeInMillis());
-
         datePickerDialog.show();
     }
 
@@ -118,7 +179,11 @@ public class NewReservationFragment extends Fragment {
     }
 
     private void confirmReservation() {
-        // Validar que todos los campos estén completos
+        if (selectedCoche == null) {
+            Toast.makeText(requireContext(), "Por favor selecciona un coche", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (!isDateSelected) {
             Toast.makeText(requireContext(), "Por favor selecciona una fecha", Toast.LENGTH_SHORT).show();
             return;
@@ -134,59 +199,42 @@ public class NewReservationFragment extends Fragment {
             return;
         }
 
-        // Validar que la hora de fin sea posterior a la hora de inicio
         if (endTime.before(startTime)) {
             Toast.makeText(requireContext(), "La hora de fin debe ser posterior a la hora de inicio", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Obtener el tipo de plaza seleccionado
         String plazaType = binding.typeSpinner.getSelectedItem().toString();
-
-        // Crear objetos para la reserva
-        Plaza plaza = new Plaza(1, plazaType);
-
-        // Convertir a segundos desde medianoche para el formato Hora
         int startSeconds = startTime.get(Calendar.HOUR_OF_DAY) * 3600 + startTime.get(Calendar.MINUTE) * 60;
         int endSeconds = endTime.get(Calendar.HOUR_OF_DAY) * 3600 + endTime.get(Calendar.MINUTE) * 60;
-        Hora hora = new Hora(startSeconds, endSeconds);
 
-        // Crear la reserva (aquí usaríamos un ID real y el email del usuario actual)
-        Reserva reserva = new Reserva(
+        viewModel.saveReservation(
                 dateFormatter.format(selectedDate.getTime()),
-                "usuario@example.com", // Este sería el email del usuario actual
-                "temp-" + System.currentTimeMillis(), // En producción se generaría un ID real
-                plaza,
-                hora
+                selectedCoche,
+                plazaType,
+                startSeconds,
+                endSeconds
         );
-
-        // Aquí se guardaría la reserva en la base de datos
-        // Por ahora solo mostraremos un mensaje de éxito
-        Toast.makeText(requireContext(), "Reserva confirmada para " + plazaType + " el día "
-                + dateFormatter.format(selectedDate.getTime()), Toast.LENGTH_LONG).show();
-
-        // Resetear todos los campos después de confirmar
-        resetFields();
     }
 
-    /**
-     * Resetea todos los campos del formulario a su estado inicial
-     */
     private void resetFields() {
-        // Resetear spinner al primer elemento
         binding.typeSpinner.setSelection(0);
 
-        // Resetear textos de botones
+        if (!cochesList.isEmpty()) {
+            binding.cocheSpinner.setSelection(0);
+            selectedCoche = cochesList.get(0);
+        } else {
+            selectedCoche = null;
+        }
+
         binding.selectDateButton.setText("Seleccionar Fecha");
         binding.selectStartTimeButton.setText("Seleccionar Hora Inicio");
         binding.selectEndTimeButton.setText("Seleccionar Hora Fin");
 
-        // Resetear variables de control
         isDateSelected = false;
         isStartTimeSelected = false;
         isEndTimeSelected = false;
 
-        // Resetear calendarios a la hora actual
         selectedDate = Calendar.getInstance();
         startTime = Calendar.getInstance();
         endTime = Calendar.getInstance();

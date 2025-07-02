@@ -1,4 +1,5 @@
 package com.lksnext.ParkingXAbaunz.view;
+
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -11,8 +12,8 @@ import com.lksnext.ParkingXAbaunz.R;
 
 public class MainActivity extends AppCompatActivity {
 
-    Button btnLogin;
-    Button btnSignUp;
+    private Button btnLogin;
+    private Button btnSignUp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -1,9 +1,11 @@
 package com.lksnext.ParkingXAbaunz.view;
 
 import android.os.Bundle;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.lksnext.ParkingXAbaunz.R;
 import com.lksnext.ParkingXAbaunz.databinding.ActivityDashboardBinding;
@@ -27,15 +29,17 @@ public class DashboardActivity extends AppCompatActivity {
             userEmail = "";
         }
 
-        binding.bottomNavigation.setOnNavigationItemSelectedListener(item -> {
+        String finalUserEmail = userEmail;
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
+
             if (itemId == R.id.nav_new_reservation) {
                 selectedFragment = NewReservationFragment.newInstance();
             } else if (itemId == R.id.nav_my_reservations) {
                 selectedFragment = MyReservationsFragment.newInstance();
             } else if (itemId == R.id.nav_profile) {
-                selectedFragment = ProfileFragment.newInstance(userEmail);
+                selectedFragment = ProfileFragment.newInstance(finalUserEmail);
             }
 
             if (selectedFragment != null) {

@@ -50,12 +50,14 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
         private final TextView dateText;
         private final TextView typeText;
         private final TextView timeText;
+        private final TextView carText;
 
         public ReservationViewHolder(@NonNull View itemView) {
             super(itemView);
             dateText = itemView.findViewById(R.id.dateText);
             typeText = itemView.findViewById(R.id.typeText);
             timeText = itemView.findViewById(R.id.timeText);
+            carText = itemView.findViewById(R.id.carText);
         }
 
         public void bind(Reserva reserva, OnReservationClickListener listener) {
@@ -76,6 +78,15 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
             String horasTexto = String.format("%02d:%02d - %02d:%02d",
                     inicioHoras, inicioMinutos, finHoras, finMinutos);
             timeText.setText(horasTexto);
+
+            if (reserva.getCoche() != null) {
+                String carInfo = reserva.getCoche().getMarca() + " " +
+                                reserva.getCoche().getModelo() +
+                                " (" + reserva.getCoche().getMatricula() + ")";
+                carText.setText(carInfo);
+            } else {
+                carText.setText("No hay coche asignado");
+            }
 
             itemView.setOnClickListener(v -> listener.onReservationClick(reserva));
         }
