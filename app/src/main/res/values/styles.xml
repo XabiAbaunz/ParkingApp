@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="FullScreenDialogStyle" parent="Theme.AppCompat.Dialog">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">#1A1D2A</item>
+        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
+    </style>
+
+    <style name="ParkingButton">
+        <item name="android:fontFamily">@font/urbanist_semibold</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+    <style name="ParkingButton.Primary">
+        <item name="android:backgroundTint">#4F5D75</item>
+    </style>
+
+    <style name="ParkingButton.Secondary">
+        <item name="android:backgroundTint">#2D3142</item>
+    </style>
+
+    <style name="ParkingLabel">
+        <item name="android:fontFamily">@font/urbanist_semibold</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+    <style name="ParkingSpinner">
+        <item name="android:background">#2D3142</item>
+        <item name="android:popupBackground">#2D3142</item>
+    </style>
+</resources>

@@ -4,12 +4,11 @@ import java.util.ArrayList;
 
 public class Coche {
     String matricula;
-
     String marca;
-
     String modelo;
-
     ArrayList<Reserva> reservas;
+
+    public Coche() {}
 
     public Coche(String matricula, String marca, String modelo) {
         this.matricula = matricula;

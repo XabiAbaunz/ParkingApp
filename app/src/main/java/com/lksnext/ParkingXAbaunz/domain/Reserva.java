@@ -1,6 +1,8 @@
 package com.lksnext.ParkingXAbaunz.domain;
 
-public class Reserva {
+import java.io.Serializable;
+
+public class Reserva implements Serializable {
 
     String fecha, id;
 

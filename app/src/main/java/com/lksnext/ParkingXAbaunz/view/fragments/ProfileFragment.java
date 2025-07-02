@@ -5,9 +5,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+
 import com.lksnext.ParkingXAbaunz.R;
 import com.lksnext.ParkingXAbaunz.databinding.FragmentProfileBinding;
 import com.lksnext.ParkingXAbaunz.view.LoginActivity;
@@ -16,6 +19,14 @@ public class ProfileFragment extends Fragment {
 
     private FragmentProfileBinding binding;
     private String userEmail;
+
+    public static ProfileFragment newInstance(String userEmail) {
+        ProfileFragment fragment = new ProfileFragment();
+        Bundle args = new Bundle();
+        args.putString("USER_EMAIL", userEmail);
+        fragment.setArguments(args);
+        return fragment;
+    }
 
     @Nullable
     @Override
@@ -33,6 +44,14 @@ public class ProfileFragment extends Fragment {
             binding.emailText.setText(userEmail);
         }
 
+        binding.manageCarsButton.setOnClickListener(v -> {
+            CochesFragment cochesFragment = CochesFragment.newInstance();
+            FragmentTransaction transaction = getParentFragmentManager().beginTransaction();
+            transaction.replace(R.id.fragmentContainer, cochesFragment);
+            transaction.addToBackStack(null);
+            transaction.commit();
+        });
+
         binding.logoutButton.setOnClickListener(v -> {
             Intent intent = new Intent(getActivity(), LoginActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -44,17 +63,9 @@ public class ProfileFragment extends Fragment {
         });
     }
 
-
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
-    }
-    public static ProfileFragment newInstance(String userEmail) {
-        ProfileFragment fragment = new ProfileFragment();
-        Bundle args = new Bundle();
-        args.putString("USER_EMAIL", userEmail);
-        fragment.setArguments(args);
-        return fragment;
     }
 }

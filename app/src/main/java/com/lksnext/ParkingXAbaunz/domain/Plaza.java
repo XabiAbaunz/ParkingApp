@@ -1,11 +1,10 @@
 package com.lksnext.ParkingXAbaunz.domain;
-public class Plaza {
 
+public class Plaza {
     long id;
     String tipo;
 
     public Plaza() {
-
     }
 
     public Plaza(long id, String tipo) {
@@ -29,4 +28,3 @@ public class Plaza {
         this.id = id;
     }
 }
-

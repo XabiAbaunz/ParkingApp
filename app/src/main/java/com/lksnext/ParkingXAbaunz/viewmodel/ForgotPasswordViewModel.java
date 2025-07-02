@@ -1,13 +1,13 @@
 package com.lksnext.ParkingXAbaunz.viewmodel;
 
-import android.util.Patterns;
-
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.lksnext.ParkingXAbaunz.data.DataRepository;
 import com.lksnext.ParkingXAbaunz.domain.Callback;
+
+import java.util.regex.Pattern;
 
 public class ForgotPasswordViewModel extends ViewModel {
 
@@ -35,12 +35,12 @@ public class ForgotPasswordViewModel extends ViewModel {
         error.setValue(null);
         resetEmailSent.setValue(null);
 
-        if (emailAddress.isEmpty()) {
+        if (emailAddress == null || emailAddress.isEmpty()) {
             error.setValue("Por favor, introduce tu correo electrónico.");
             return;
         }
 
-        if (!Patterns.EMAIL_ADDRESS.matcher(emailAddress).matches()) {
+        if (!isValidEmail(emailAddress)) {
             error.setValue("El formato del email no es válido.");
             return;
         }
@@ -58,5 +58,15 @@ public class ForgotPasswordViewModel extends ViewModel {
                 error.setValue(errorMessage);
             }
         });
+    }
+    public boolean isValidEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+
+        // Simple regex for email validation
+        String emailPattern = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+        Pattern pattern = Pattern.compile(emailPattern);
+        return pattern.matcher(email).matches();
     }
 }

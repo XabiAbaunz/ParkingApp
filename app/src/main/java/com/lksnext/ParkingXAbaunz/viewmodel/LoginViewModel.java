@@ -8,6 +8,7 @@ import com.lksnext.ParkingXAbaunz.data.DataRepository;
 import com.lksnext.ParkingXAbaunz.domain.Callback;
 
 public class LoginViewModel extends ViewModel {
+
     private final MutableLiveData<Boolean> logged = new MutableLiveData<>(null);
     private final MutableLiveData<String> email = new MutableLiveData<>("");
     private final MutableLiveData<String> password = new MutableLiveData<>("");
@@ -64,6 +65,7 @@ public class LoginViewModel extends ViewModel {
             }
         });
     }
+
     public void clearError() {
         error.setValue(null);
     }

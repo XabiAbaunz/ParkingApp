@@ -33,7 +33,6 @@ public class LoginActivity extends AppCompatActivity {
                     intent.putExtra("USER_EMAIL", binding.editTextEmail.getText().toString());
                     startActivity(intent);
                     finish();
-                } else {
                 }
                 binding.progressBar.setVisibility(View.GONE);
                 binding.button.setEnabled(true);
@@ -47,7 +46,6 @@ public class LoginActivity extends AppCompatActivity {
                 binding.button.setEnabled(true);
             }
         });
-
 
         binding.button.setOnClickListener(v -> {
             String email = binding.editTextEmail.getText().toString();

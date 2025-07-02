@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    android:background="#1A1D2A">
+
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Editar Reserva"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:fontFamily="@font/urbanist_semibold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/dateLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Fecha"
+        android:textColor="#FFFFFF"
+        android:fontFamily="@font/urbanist_semibold"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/dateButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Seleccionar fecha"
+        android:fontFamily="@font/urbanist_semibold"
+        android:backgroundTint="#2D3142"
+        android:textColor="#FFFFFF"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toBottomOf="@id/dateLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/carLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Coche"
+        android:textColor="#FFFFFF"
+        android:fontFamily="@font/urbanist_semibold"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/dateButton"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Spinner
+        android:id="@+id/carSpinner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#2D3142"
+        android:popupBackground="#2D3142"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toBottomOf="@id/carLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/plazaLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tipo de Plaza"
+        android:textColor="#FFFFFF"
+        android:fontFamily="@font/urbanist_semibold"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/carSpinner"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Spinner
+        android:id="@+id/plazaSpinner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#2D3142"
+        android:popupBackground="#2D3142"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toBottomOf="@id/plazaLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/timeLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Horario"
+        android:textColor="#FFFFFF"
+        android:fontFamily="@font/urbanist_semibold"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/plazaSpinner"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/timeLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toBottomOf="@id/timeLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+            android:id="@+id/startTimeButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Inicio"
+            android:fontFamily="@font/urbanist_semibold"
+            android:backgroundTint="#2D3142"
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/endTimeButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Fin"
+            android:fontFamily="@font/urbanist_semibold"
+            android:backgroundTint="#2D3142"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="0dp"
+        android:layout_height="55dp"
+        android:text="Guardar Cambios"
+        android:fontFamily="@font/urbanist_semibold"
+        android:backgroundTint="#007BFF"
+        android:textColor="#FFFFFF"
+        app:cornerRadius="12dp"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/timeLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <Button
+        android:id="@+id/cancelButton"
+        android:layout_width="0dp"
+        android:layout_height="55dp"
+        android:text="Cancelar"
+        android:fontFamily="@font/urbanist_semibold"
+        android:backgroundTint="#2D3142"
+        android:textColor="#FFFFFF"
+        app:cornerRadius="12dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/saveButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

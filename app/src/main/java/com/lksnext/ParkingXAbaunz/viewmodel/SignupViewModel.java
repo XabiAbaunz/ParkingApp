@@ -86,6 +86,7 @@ public class SignupViewModel extends ViewModel {
                 error.setValue(null);
                 registered.setValue(Boolean.TRUE);
             }
+
             @Override
             public void onFailure(String errorMessage) {
                 error.setValue(errorMessage);
@@ -93,6 +94,7 @@ public class SignupViewModel extends ViewModel {
             }
         });
     }
+
     public void clearError() {
         error.setValue(null);
         registered.setValue(null);

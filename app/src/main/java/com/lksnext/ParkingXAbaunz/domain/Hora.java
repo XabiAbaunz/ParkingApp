@@ -1,11 +1,10 @@
 package com.lksnext.ParkingXAbaunz.domain;
-public class Hora {
 
+public class Hora {
     long horaInicio;
     long horaFin;
 
     public Hora() {
-
     }
 
     public Hora(long horaInicio, long horaFin) {
