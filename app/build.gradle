@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id 'com.google.gms.google-services'
     id 'jacoco'
+    id 'org.sonarqube'
 }
 
 android {
@@ -16,11 +17,13 @@ android {
         targetSdk 35
         versionCode 1
         versionName "1.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            testCoverageEnabled true
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -33,19 +36,22 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '17'
     }
 
     testOptions {
         unitTests.all {
             jacoco {
                 includeNoLocationClasses = true
+                excludes = ['jdk.internal.*']
             }
         }
+        unitTests.returnDefaultValues = true
     }
 }
 
@@ -63,18 +69,14 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation libs.androidx.navigation.fragment.ktx
     implementation libs.androidx.navigation.ui.ktx
-    testImplementation libs.junit
-    androidTestImplementation libs.androidx.junit
-    androidTestImplementation libs.androidx.espresso.core
-    androidTestImplementation platform(libs.androidx.compose.bom)
-    androidTestImplementation libs.androidx.ui.test.junit4
-    debugImplementation libs.androidx.ui.tooling
-    debugImplementation libs.androidx.ui.test.manifest
+
+    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation 'com.google.firebase:firebase-firestore:24.7.1'
 
+    // Testing dependencies
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.14.2'
     testImplementation 'org.mockito:mockito-inline:5.2.0'
@@ -82,47 +84,62 @@ dependencies {
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation platform(libs.androidx.compose.bom)
+    androidTestImplementation libs.androidx.ui.test.junit4
+
+    debugImplementation libs.androidx.ui.tooling
+    debugImplementation libs.androidx.ui.test.manifest
 }
 
 jacoco {
-    toolVersion = "0.8.8"
+    toolVersion = "0.8.11"
 }
 
 tasks.register("jacocoTestReport", JacocoReport) {
     dependsOn("testDebugUnitTest")
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports."
 
     reports {
         xml.required = true
         html.required = true
     }
 
-    def javaDebugTree = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: [
+    def fileFilter = [
             '**/R.class',
             '**/R$*.class',
             '**/BuildConfig.*',
             '**/Manifest*.*',
-            '**/*Test*.*'
-    ])
-    def kotlinDebugTree = fileTree(dir: "$buildDir/intermediates/javac/debug", excludes: [
-            '**/R.class',
-            '**/R$*.class',
-            '**/BuildConfig.*',
-            '**/Manifest*.*',
-            '**/*Test*.*'
-    ])
+            '**/*Test*.*',
+            'android/**/*.*',
+            '**/databinding/**',
+            '**/android/databinding/**',
+            '**/androidx/databinding/**',
+            '**/*DataBindingImpl.class',
+            '**/*DataBinding.class',
+            '**/BR.class'
+    ]
 
-    classDirectories.setFrom(files([javaDebugTree, kotlinDebugTree]))
-    sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
+    def debugTree = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: fileFilter)
+    def mainSrc = "$projectDir/src/main/java"
+
+    sourceDirectories.setFrom(files([mainSrc]))
+    classDirectories.setFrom(files([debugTree]))
     executionData.setFrom(fileTree(dir: buildDir, includes: [
-            "jacoco/testDebugUnitTest.exec"
+            "jacoco/testDebugUnitTest.exec",
+            "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
     ]))
 }
 
 sonarqube {
     properties {
-        property "sonar.sources", "app/src/main/java"
-        property "sonar.tests", "app/src/test/java"
-        property "sonar.junit.reportPaths", "app/build/test-results/testDebugUnitTest"
-        property "sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
+        property "sonar.projectKey", "tu-proyecto-key" // Reemplaza con tu clave de proyecto
+        property "sonar.organization", "tu-organizacion" // Reemplaza con tu organización
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.sources", "src/main/java,src/main/kotlin"
+        property "sonar.tests", "src/test/java,src/test/kotlin"
+        property "sonar.junit.reportPaths", "build/test-results/testDebugUnitTest"
+        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
+        property "sonar.exclusions", "**/R.class,**/R\$*.class,**/BuildConfig.*,**/Manifest*.*,**/*Test*.*,android/**/*.*"
     }
 }
