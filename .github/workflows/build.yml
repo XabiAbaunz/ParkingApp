@@ -36,8 +36,14 @@ jobs:
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x ./gradlew
 
-      - name: Run tests and generate coverage
-        run: ./gradlew testDebugUnitTest jacocoTestReport
+      - name: Build project
+        run: ./gradlew assembleDebug
+
+      - name: Run tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Generate coverage report
+        run: ./gradlew jacocoTestReport
 
       - name: Run SonarQube analysis
         env:

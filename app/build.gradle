@@ -119,7 +119,7 @@ tasks.register("jacocoTestReport", JacocoReport) {
             '**/BR.class'
     ]
 
-    def debugTree = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: fileFilter)
+    def debugTree = fileTree(dir: "$buildDir/intermediates/javac/debug", excludes: fileFilter)
     def mainSrc = "$projectDir/src/main/java"
 
     sourceDirectories.setFrom(files([mainSrc]))
@@ -130,6 +130,7 @@ tasks.register("jacocoTestReport", JacocoReport) {
     ]))
 }
 
+// Configuración simplificada de SonarQube
 sonar {
     properties {
         property "sonar.sources", "src/main/java"
@@ -137,6 +138,6 @@ sonar {
         property "sonar.junit.reportPaths", "build/test-results/testDebugUnitTest"
         property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml"
         property "sonar.exclusions", "**/R.class,**/R\$*.class,**/BuildConfig.*,**/Manifest*.*,**/*Test*.*,android/**/*.*"
-        property "sonar.java.binaries", "build/intermediates/javac/debug,build/tmp/kotlin-classes/debug"
+        // Eliminamos sonar.java.binaries para que SonarQube detecte automáticamente
     }
 }
