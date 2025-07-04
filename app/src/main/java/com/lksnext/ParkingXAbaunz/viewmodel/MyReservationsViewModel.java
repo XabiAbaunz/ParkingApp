@@ -1,14 +1,16 @@
 package com.lksnext.ParkingXAbaunz.viewmodel;
 
+import android.app.Application;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
 
 import com.lksnext.ParkingXAbaunz.data.DataRepository;
 import com.lksnext.ParkingXAbaunz.domain.Callback;
 import com.lksnext.ParkingXAbaunz.domain.CallbackWithData;
 import com.lksnext.ParkingXAbaunz.domain.Coche;
 import com.lksnext.ParkingXAbaunz.domain.Reserva;
+import com.lksnext.ParkingXAbaunz.notifications.ReservationNotificationManager;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -18,9 +20,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class MyReservationsViewModel extends ViewModel {
+public class MyReservationsViewModel extends AndroidViewModel {
 
     private DataRepository repository;
+    private ReservationNotificationManager notificationManager;
     private MutableLiveData<List<Reserva>> futureReservationsLiveData;
     private MutableLiveData<List<Reserva>> pastReservationsLiveData;
     private MutableLiveData<String> errorLiveData;
@@ -28,8 +31,10 @@ public class MyReservationsViewModel extends ViewModel {
     private MutableLiveData<Boolean> isLoadingLiveData;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
-    public MyReservationsViewModel() {
+    public MyReservationsViewModel(Application application) {
+        super(application);
         repository = DataRepository.getInstance();
+        notificationManager = new ReservationNotificationManager(application);
         futureReservationsLiveData = new MutableLiveData<>();
         pastReservationsLiveData = new MutableLiveData<>();
         errorLiveData = new MutableLiveData<>();
@@ -83,6 +88,7 @@ public class MyReservationsViewModel extends ViewModel {
             public void onSuccess() {
                 isLoadingLiveData.setValue(false);
                 successLiveData.setValue("Reserva eliminada correctamente");
+                notificationManager.cancelNotifications(reserva.getId());
                 loadReservations();
             }
 
@@ -156,13 +162,44 @@ public class MyReservationsViewModel extends ViewModel {
     }
 
     public void updateReservation(Reserva reserva) {
+        if (!isValidReservation(reserva)) {
+            return;
+        }
+
         isLoadingLiveData.setValue(true);
 
+        repository.checkReservationConflictForUpdate(
+                reserva.getId(),
+                reserva.getFecha(),
+                reserva.getHoraInicio(),
+                reserva.getHoraFin(),
+                new CallbackWithData<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean hasConflict) {
+                        if (hasConflict) {
+                            isLoadingLiveData.setValue(false);
+                            errorLiveData.setValue("Ya tienes otra reserva que coincide con este horario");
+                        } else {
+                            updateReservationInternal(reserva);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        isLoadingLiveData.setValue(false);
+                        errorLiveData.setValue("Error al verificar conflictos: " + error);
+                    }
+                }
+        );
+    }
+
+    private void updateReservationInternal(Reserva reserva) {
         repository.updateReservation(reserva, new Callback() {
             @Override
             public void onSuccess() {
                 isLoadingLiveData.setValue(false);
                 successLiveData.setValue("Reserva actualizada correctamente");
+                notificationManager.updateNotifications(reserva);
                 loadReservations();
             }
 
@@ -174,7 +211,68 @@ public class MyReservationsViewModel extends ViewModel {
         });
     }
 
+    private boolean isValidReservation(Reserva reserva) {
+        if (reserva.getCoche() == null) {
+            errorLiveData.setValue("Debes seleccionar un coche");
+            return false;
+        }
+
+        if (reserva.getFecha() == null || reserva.getFecha().isEmpty()) {
+            errorLiveData.setValue("Debes seleccionar una fecha");
+            return false;
+        }
+
+        if (reserva.getHoraInicio() >= reserva.getHoraFin()) {
+            errorLiveData.setValue("La hora de fin debe ser posterior a la hora de inicio");
+            return false;
+        }
+
+        if (!isValidDate(reserva.getFecha())) {
+            errorLiveData.setValue("Solo puedes hacer reservas desde hoy hasta 7 días naturales");
+            return false;
+        }
+
+        long durationSeconds = reserva.getHoraFin() - reserva.getHoraInicio();
+        long durationHours = durationSeconds / 3600;
+        if (durationHours > 8) {
+            errorLiveData.setValue("La reserva no puede exceder las 8 horas");
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean isValidDate(String fechaStr) {
+        try {
+            Date fecha = dateFormat.parse(fechaStr);
+
+            Calendar today = Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
+
+            Calendar maxDate = Calendar.getInstance();
+            maxDate.add(Calendar.DAY_OF_MONTH, 7);
+            maxDate.set(Calendar.HOUR_OF_DAY, 23);
+            maxDate.set(Calendar.MINUTE, 59);
+            maxDate.set(Calendar.SECOND, 59);
+            maxDate.set(Calendar.MILLISECOND, 999);
+
+            return fecha != null &&
+                    !fecha.before(today.getTime()) &&
+                    !fecha.after(maxDate.getTime());
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+
     public void getCoches(CallbackWithData<List<Coche>> callback) {
         repository.getCoches(callback);
+    }
+
+    public void clearMessages() {
+        errorLiveData.setValue(null);
+        successLiveData.setValue(null);
     }
 }

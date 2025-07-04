@@ -1,6 +1,7 @@
 package com.lksnext.ParkingXAbaunz.data;
 
 import androidx.annotation.NonNull;
+import android.util.Log;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -10,6 +11,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseAuthInvalidUserException;
 import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.auth.FirebaseUser;
@@ -24,6 +26,7 @@ import java.util.List;
 
 public class DataRepository {
 
+    private static final String TAG = "DataRepository";
     private static DataRepository instance;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -188,6 +191,131 @@ public class DataRepository {
                 });
     }
 
+    public void checkReservationConflict(String fecha, long horaInicio, long horaFin, CallbackWithData<Boolean> callback) {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            callback.onFailure("Usuario no autenticado");
+            return;
+        }
+
+        db.collection("usuarios")
+                .document(currentUser.getUid())
+                .collection("reservas")
+                .whereEqualTo("fecha", fecha)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        boolean hasConflict = false;
+
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            try {
+                                Reserva reserva = document.toObject(Reserva.class);
+                                if (reserva.getHora() != null) {
+                                    long existingStart = reserva.getHora().getHoraInicio();
+                                    long existingEnd = reserva.getHora().getHoraFin();
+
+                                    if (hasTimeOverlap(horaInicio, horaFin, existingStart, existingEnd)) {
+                                        hasConflict = true;
+                                        break;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error al parsear reserva: " + e.getMessage());
+                            }
+                        }
+
+                        callback.onSuccess(hasConflict);
+                    } else {
+                        String errorMessage = task.getException() != null ?
+                                task.getException().getLocalizedMessage() :
+                                "Error al verificar conflictos";
+                        callback.onFailure(errorMessage);
+                    }
+                });
+    }
+
+    public void checkReservationConflictForUpdate(String reservaIdToExclude, String fecha, long horaInicio, long horaFin, CallbackWithData<Boolean> callback) {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            callback.onFailure("Usuario no autenticado");
+            return;
+        }
+
+        db.collection("usuarios")
+                .document(currentUser.getUid())
+                .collection("reservas")
+                .whereEqualTo("fecha", fecha)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        boolean hasConflict = false;
+
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            try {
+                                Reserva reserva = document.toObject(Reserva.class);
+                                if (reserva.getHora() != null && !reserva.getId().equals(reservaIdToExclude)) {
+                                    long existingStart = reserva.getHora().getHoraInicio();
+                                    long existingEnd = reserva.getHora().getHoraFin();
+
+                                    if (hasTimeOverlap(horaInicio, horaFin, existingStart, existingEnd)) {
+                                        hasConflict = true;
+                                        break;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error al parsear reserva: " + e.getMessage());
+                            }
+                        }
+
+                        callback.onSuccess(hasConflict);
+                    } else {
+                        String errorMessage = task.getException() != null ?
+                                task.getException().getLocalizedMessage() :
+                                "Error al verificar conflictos";
+                        callback.onFailure(errorMessage);
+                    }
+                });
+    }
+
+    private boolean hasTimeOverlap(long start1, long end1, long start2, long end2) {
+        return start1 < end2 && start2 < end1;
+    }
+
+    public void getReservationById(String reservaId, CallbackWithData<Reserva> callback) {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            callback.onFailure("Usuario no autenticado");
+            return;
+        }
+
+        db.collection("usuarios")
+                .document(currentUser.getUid())
+                .collection("reservas")
+                .document(reservaId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot document = task.getResult();
+                        if (document.exists()) {
+                            try {
+                                Reserva reserva = document.toObject(Reserva.class);
+                                callback.onSuccess(reserva);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error al parsear reserva: " + e.getMessage());
+                                callback.onFailure("Error al cargar la reserva");
+                            }
+                        } else {
+                            callback.onFailure("Reserva no encontrada");
+                        }
+                    } else {
+                        String errorMessage = task.getException() != null ?
+                                task.getException().getLocalizedMessage() :
+                                "Error al cargar la reserva";
+                        callback.onFailure(errorMessage);
+                    }
+                });
+    }
+
     public void saveReservation(Reserva reserva, Callback callback) {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
@@ -253,12 +381,14 @@ public class DataRepository {
 
                                                     @Override
                                                     public void onFailure(String error) {
+                                                        Log.e(TAG, "Error al actualizar reserva: " + error);
                                                     }
                                                 });
                                             }
 
                                             @Override
                                             public void onFailure(String error) {
+                                                Log.e(TAG, "Error al obtener coche: " + error);
                                             }
                                         });
                                     }
@@ -266,6 +396,7 @@ public class DataRepository {
 
                                 reservas.add(reserva);
                             } catch (Exception e) {
+                                Log.e(TAG, "Error al parsear reserva: " + e.getMessage());
                             }
                         }
                         callback.onSuccess(reservas);
