@@ -51,7 +51,7 @@ public class MyReservationsFragment extends Fragment implements ReservationAdapt
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        viewModel = new ViewModelProvider(this).get(MyReservationsViewModel.class);
+        viewModel = new ViewModelProvider(this, new ViewModelProvider.AndroidViewModelFactory(requireActivity().getApplication())).get(MyReservationsViewModel.class);
 
         futureReservationsRecyclerView = binding.futureReservationsRecyclerView;
         pastReservationsRecyclerView = binding.pastReservationsRecyclerView;

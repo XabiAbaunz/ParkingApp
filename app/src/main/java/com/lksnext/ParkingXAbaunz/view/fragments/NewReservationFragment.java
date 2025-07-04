@@ -58,7 +58,7 @@ public class NewReservationFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        viewModel = new ViewModelProvider(this).get(NewReservationViewModel.class);
+        viewModel = new ViewModelProvider(this, new ViewModelProvider.AndroidViewModelFactory(requireActivity().getApplication())).get(NewReservationViewModel.class);
 
         setupSpinners();
         setupObservers();
@@ -149,7 +149,11 @@ public class NewReservationFragment extends Fragment {
         );
 
         Calendar today = Calendar.getInstance();
+        Calendar maxDate = Calendar.getInstance();
+        maxDate.add(Calendar.DAY_OF_MONTH, 7);
+
         datePickerDialog.getDatePicker().setMinDate(today.getTimeInMillis());
+        datePickerDialog.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
         datePickerDialog.show();
     }
 
@@ -168,6 +172,10 @@ public class NewReservationFragment extends Fragment {
                     } else {
                         isEndTimeSelected = true;
                         binding.selectEndTimeButton.setText("Hora fin: " + timeFormatter.format(calendar.getTime()));
+
+                        if (isStartTimeSelected) {
+                            validateDuration();
+                        }
                     }
                 },
                 calendar.get(Calendar.HOUR_OF_DAY),
@@ -176,6 +184,21 @@ public class NewReservationFragment extends Fragment {
         );
 
         timePickerDialog.show();
+    }
+
+    private void validateDuration() {
+        if (isStartTimeSelected && isEndTimeSelected) {
+            long startTimeMillis = startTime.getTimeInMillis();
+            long endTimeMillis = endTime.getTimeInMillis();
+            long durationHours = (endTimeMillis - startTimeMillis) / (1000 * 60 * 60);
+
+            if (durationHours > 8) {
+                Toast.makeText(requireContext(), "La reserva no puede exceder las 8 horas", Toast.LENGTH_LONG).show();
+                isEndTimeSelected = false;
+                binding.selectEndTimeButton.setText("Seleccionar Hora Fin");
+                endTime = Calendar.getInstance();
+            }
+        }
     }
 
     private void confirmReservation() {
@@ -201,6 +224,13 @@ public class NewReservationFragment extends Fragment {
 
         if (endTime.before(startTime)) {
             Toast.makeText(requireContext(), "La hora de fin debe ser posterior a la hora de inicio", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long durationMillis = endTime.getTimeInMillis() - startTime.getTimeInMillis();
+        long durationHours = durationMillis / (1000 * 60 * 60);
+        if (durationHours > 8) {
+            Toast.makeText(requireContext(), "La reserva no puede exceder las 8 horas", Toast.LENGTH_SHORT).show();
             return;
         }
 

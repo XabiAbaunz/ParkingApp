@@ -1,5 +1,6 @@
 package com.lksnext.ParkingXAbaunz;
 
+import android.app.Application;
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
@@ -8,6 +9,8 @@ import com.lksnext.ParkingXAbaunz.data.DataRepository;
 import com.lksnext.ParkingXAbaunz.domain.Callback;
 import com.lksnext.ParkingXAbaunz.domain.CallbackWithData;
 import com.lksnext.ParkingXAbaunz.domain.Reserva;
+import com.lksnext.ParkingXAbaunz.domain.Coche;
+import com.lksnext.ParkingXAbaunz.notifications.ReservationNotificationManager;
 import com.lksnext.ParkingXAbaunz.utils.LiveDataTestUtil;
 import com.lksnext.ParkingXAbaunz.viewmodel.MyReservationsViewModel;
 
@@ -34,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -45,7 +49,13 @@ public class MyReservationsViewModelTest {
     public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
 
     @Mock
+    private Application mockApplication;
+
+    @Mock
     private DataRepository mockRepository;
+
+    @Mock
+    private ReservationNotificationManager mockNotificationManager;
 
     private MyReservationsViewModel viewModel;
     private MockedStatic<DataRepository> mockedDataRepository;
@@ -66,7 +76,7 @@ public class MyReservationsViewModelTest {
             return null;
         }).when(mockRepository).getReservations(any(CallbackWithData.class));
 
-        viewModel = new MyReservationsViewModel();
+        viewModel = new MyReservationsViewModel(mockApplication);
 
         // Resetear interacciones del mock después de la inicialización del ViewModel
         reset(mockRepository);
@@ -112,7 +122,17 @@ public class MyReservationsViewModelTest {
         reserva.setId("test-id");
         reserva.setFecha("2025-08-15");
         reserva.setHoraInicio(800L);
+        reserva.setHoraFin(1800L);
+
+        Coche coche = new Coche("ABC123", "Toyota", "Camry");
+        reserva.setCoche(coche);
+
         return reserva;
+    }
+
+    private String getTodayDateString() {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        return formatter.format(new Date());
     }
 
     // ==================== TESTS DE CARGA DE RESERVAS ====================
@@ -284,7 +304,16 @@ public class MyReservationsViewModelTest {
     @Test
     public void updateReservation_actualizacionExitosa_estableceMensajeExitoYRecargaReservas() throws InterruptedException {
         Reserva testReservation = createTestReservation();
+        testReservation.setFecha(getTodayDateString());
 
+        // Mock para checkReservationConflictForUpdate - sin conflicto
+        doAnswer(invocation -> {
+            CallbackWithData<Boolean> callback = invocation.getArgument(4);
+            callback.onSuccess(false);
+            return null;
+        }).when(mockRepository).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+
+        // Mock para updateReservation
         doAnswer(invocation -> {
             Callback callback = invocation.getArgument(1);
             callback.onSuccess();
@@ -299,6 +328,7 @@ public class MyReservationsViewModelTest {
         String successMessage = LiveDataTestUtil.getValue(viewModel.getSuccessLiveData());
         assertEquals("El mensaje de éxito debería coincidir", "Reserva actualizada correctamente", successMessage);
 
+        verify(mockRepository, times(1)).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
         verify(mockRepository, times(1)).updateReservation(eq(testReservation), any(Callback.class));
         verify(mockRepository, times(1)).getReservations(any(CallbackWithData.class));
     }
@@ -306,8 +336,17 @@ public class MyReservationsViewModelTest {
     @Test
     public void updateReservation_actualizacionFallida_estableceMensajeError() throws InterruptedException {
         Reserva testReservation = createTestReservation();
+        testReservation.setFecha(getTodayDateString());
         String errorMessage = "Falló la actualización de la reserva";
 
+        // Mock para checkReservationConflictForUpdate - sin conflicto
+        doAnswer(invocation -> {
+            CallbackWithData<Boolean> callback = invocation.getArgument(4);
+            callback.onSuccess(false);
+            return null;
+        }).when(mockRepository).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+
+        // Mock para updateReservation - fallo
         doAnswer(invocation -> {
             Callback callback = invocation.getArgument(1);
             callback.onFailure(errorMessage);
@@ -322,7 +361,59 @@ public class MyReservationsViewModelTest {
         String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
         assertEquals("El mensaje de error debería coincidir", errorMessage, error);
 
+        verify(mockRepository, times(1)).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
         verify(mockRepository, times(1)).updateReservation(eq(testReservation), any(Callback.class));
+        verify(mockRepository, never()).getReservations(any(CallbackWithData.class));
+    }
+
+    @Test
+    public void updateReservation_conflictoExistente_estableceMensajeError() throws InterruptedException {
+        Reserva testReservation = createTestReservation();
+        testReservation.setFecha(getTodayDateString());
+
+        // Mock para checkReservationConflictForUpdate - hay conflicto
+        doAnswer(invocation -> {
+            CallbackWithData<Boolean> callback = invocation.getArgument(4);
+            callback.onSuccess(true);
+            return null;
+        }).when(mockRepository).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+
+        viewModel.updateReservation(testReservation);
+
+        Boolean isLoading = LiveDataTestUtil.getValue(viewModel.getIsLoadingLiveData());
+        assertFalse("La carga debería ser false después del conflicto", isLoading);
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        assertEquals("Debe mostrar error por conflicto", "Ya tienes otra reserva que coincide con este horario", error);
+
+        verify(mockRepository, times(1)).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+        verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
+        verify(mockRepository, never()).getReservations(any(CallbackWithData.class));
+    }
+
+    @Test
+    public void updateReservation_errorVerificacionConflicto_estableceMensajeError() throws InterruptedException {
+        Reserva testReservation = createTestReservation();
+        testReservation.setFecha(getTodayDateString());
+        String errorConflicto = "Error de red";
+
+        // Mock para checkReservationConflictForUpdate - error
+        doAnswer(invocation -> {
+            CallbackWithData<Boolean> callback = invocation.getArgument(4);
+            callback.onFailure(errorConflicto);
+            return null;
+        }).when(mockRepository).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+
+        viewModel.updateReservation(testReservation);
+
+        Boolean isLoading = LiveDataTestUtil.getValue(viewModel.getIsLoadingLiveData());
+        assertFalse("La carga debería ser false después del error", isLoading);
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        assertEquals("Debe mostrar error de verificación", "Error al verificar conflictos: " + errorConflicto, error);
+
+        verify(mockRepository, times(1)).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+        verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
         verify(mockRepository, never()).getReservations(any(CallbackWithData.class));
     }
 
@@ -330,21 +421,120 @@ public class MyReservationsViewModelTest {
     public void updateReservation_reservaNula_manejaGracilmente() {
         try {
             viewModel.updateReservation(null);
-            verify(mockRepository, times(1)).updateReservation(eq(null), any(Callback.class));
+            verify(mockRepository, never()).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+            verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
         } catch (Exception e) {
             assertTrue("Debería manejar reserva nula apropiadamente", true);
         }
     }
 
     @Test
+    public void updateReservation_cocheNulo_estableceMensajeError() throws InterruptedException {
+        Reserva testReservation = createTestReservation();
+        testReservation.setCoche(null);
+
+        viewModel.updateReservation(testReservation);
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        assertEquals("Debe mostrar error por coche faltante", "Debes seleccionar un coche", error);
+
+        verify(mockRepository, never()).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+        verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
+    }
+
+    @Test
+    public void updateReservation_fechaNula_estableceMensajeError() throws InterruptedException {
+        Reserva testReservation = createTestReservation();
+        testReservation.setFecha(null);
+
+        viewModel.updateReservation(testReservation);
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        assertEquals("Debe mostrar error por fecha faltante", "Debes seleccionar una fecha", error);
+
+        verify(mockRepository, never()).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+        verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
+    }
+
+    @Test
+    public void updateReservation_horaInicioMayorQueHoraFin_estableceMensajeError() throws InterruptedException {
+        Reserva testReservation = createTestReservation();
+        testReservation.setHoraInicio(2000L);
+        testReservation.setHoraFin(1000L);
+
+        viewModel.updateReservation(testReservation);
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        assertEquals("Debe mostrar error por rango de tiempo inválido", "La hora de fin debe ser posterior a la hora de inicio", error);
+
+        verify(mockRepository, never()).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+        verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
+    }
+
+    @Test
+    public void updateReservation_fechaInvalida_estableceMensajeError() throws InterruptedException {
+        Reserva testReservation = createTestReservation();
+        testReservation.setFecha("2020-01-01"); // Fecha en el pasado
+
+        viewModel.updateReservation(testReservation);
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        assertEquals("Debe mostrar error por fecha inválida", "Solo puedes hacer reservas desde hoy hasta 7 días naturales", error);
+
+        verify(mockRepository, never()).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+        verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
+    }
+
+    @Test
+    public void updateReservation_duracionExcesiva_estableceMensajeError() throws InterruptedException {
+        Reserva testReservation = createTestReservation();
+        testReservation.setFecha(getTodayDateString());
+        testReservation.setHoraInicio(0L);
+        testReservation.setHoraFin(32400L); // 9 horas
+
+        viewModel.updateReservation(testReservation);
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        assertEquals("Debe mostrar error por duración excesiva", "La reserva no puede exceder las 8 horas", error);
+
+        verify(mockRepository, never()).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+        verify(mockRepository, never()).updateReservation(any(Reserva.class), any(Callback.class));
+    }
+
+    @Test
     public void updateReservation_reservaModificada_pasaDatosCorrectosAlRepositorio() {
         Reserva modifiedReservation = createTestReservation();
-        modifiedReservation.setFecha("2025-09-15");
+        modifiedReservation.setFecha(getTodayDateString());
         modifiedReservation.setHoraInicio(1000L);
+
+        // Mock para checkReservationConflictForUpdate - sin conflicto
+        doAnswer(invocation -> {
+            CallbackWithData<Boolean> callback = invocation.getArgument(4);
+            callback.onSuccess(false);
+            return null;
+        }).when(mockRepository).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
 
         viewModel.updateReservation(modifiedReservation);
 
-        verify(mockRepository, times(1)).updateReservation(eq(modifiedReservation), any(Callback.class));
+        verify(mockRepository, times(1)).checkReservationConflictForUpdate(
+                eq(modifiedReservation.getId()),
+                eq(modifiedReservation.getFecha()),
+                eq(modifiedReservation.getHoraInicio()),
+                eq(modifiedReservation.getHoraFin()),
+                any(CallbackWithData.class));
+    }
+
+    // ==================== TESTS ADICIONALES ====================
+
+    @Test
+    public void clearMessages_limpiaMensajesDeErrorYExito() throws InterruptedException {
+        viewModel.clearMessages();
+
+        String error = LiveDataTestUtil.getValue(viewModel.getErrorLiveData());
+        String success = LiveDataTestUtil.getValue(viewModel.getSuccessLiveData());
+
+        assertNull("El mensaje de error debería ser null", error);
+        assertNull("El mensaje de éxito debería ser null", success);
     }
 
     // ==================== TESTS DE INTEGRACIÓN ====================
@@ -358,6 +548,13 @@ public class MyReservationsViewModelTest {
             callback.onSuccess();
             return null;
         }).when(mockRepository).deleteReservation(eq(testReservation.getId()), any(Callback.class));
+
+        // Mock para checkReservationConflictForUpdate - sin conflicto
+        doAnswer(invocation -> {
+            CallbackWithData<Boolean> callback = invocation.getArgument(4);
+            callback.onSuccess(false);
+            return null;
+        }).when(mockRepository).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
 
         doAnswer(invocation -> {
             Callback callback = invocation.getArgument(1);
@@ -377,6 +574,13 @@ public class MyReservationsViewModelTest {
             return null;
         }).when(mockRepository).getReservations(any(CallbackWithData.class));
 
+        // Mock para checkReservationConflictForUpdate - sin conflicto
+        doAnswer(invocation -> {
+            CallbackWithData<Boolean> callback = invocation.getArgument(4);
+            callback.onSuccess(false);
+            return null;
+        }).when(mockRepository).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
+
         doAnswer(invocation -> {
             Callback callback = invocation.getArgument(1);
             callback.onSuccess();
@@ -384,11 +588,13 @@ public class MyReservationsViewModelTest {
         }).when(mockRepository).updateReservation(eq(testReservation), any(Callback.class));
 
         // Actualizar después de eliminar
+        testReservation.setFecha(getTodayDateString());
         viewModel.updateReservation(testReservation);
 
         String successMessage = LiveDataTestUtil.getValue(viewModel.getSuccessLiveData());
         assertEquals("El último mensaje de éxito debería ser de actualización", "Reserva actualizada correctamente", successMessage);
 
+        verify(mockRepository, times(1)).checkReservationConflictForUpdate(anyString(), anyString(), anyLong(), anyLong(), any(CallbackWithData.class));
         verify(mockRepository, times(1)).updateReservation(eq(testReservation), any(Callback.class));
         verify(mockRepository, times(1)).getReservations(any(CallbackWithData.class));
     }
@@ -514,5 +720,34 @@ public class MyReservationsViewModelTest {
         assertEquals("La primera pasada debería ser la fecha y hora más tardía", "past2", pastReservations.get(0).getId());
         assertEquals("La segunda pasada debería ser misma fecha pero hora más temprana", "past1", pastReservations.get(1).getId());
         assertEquals("La tercera pasada debería ser fecha más temprana", "past3", pastReservations.get(2).getId());
+    }
+
+    // Clase utilitaria para testing de LiveData (si no tienes LiveDataTestUtil)
+    public static class LiveDataTestUtil {
+
+        public static <T> T getValue(LiveData<T> liveData) throws InterruptedException {
+            final Object[] data = new Object[1];
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            Observer<T> observer = new Observer<T>() {
+                @Override
+                public void onChanged(T o) {
+                    data[0] = o;
+                    latch.countDown();
+                }
+            };
+
+            liveData.observeForever(observer);
+
+            try {
+                latch.await(2, TimeUnit.SECONDS);
+            } finally {
+                liveData.removeObserver(observer);
+            }
+
+            @SuppressWarnings("unchecked")
+            T result = (T) data[0];
+            return result;
+        }
     }
 }
